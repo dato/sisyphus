@@ -22,7 +22,7 @@ static const char *const baseCmd[] = {
   "--net", "none", "--env", "LANG=C.UTF-8",
   "--memory", MEM_LIM, "--memory-swap", MEM_LIM,
   "--user", "nobody:nogroup", "--cap-drop", "ALL",
-  "--read-only", "--tmpfs", "/tmp:exec,size=75M",
+  "--read-only", "--tmpfs", "/tmp:exec,size=256M",
   DOCKER_IMAGE,
 };
 
