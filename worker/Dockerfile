@@ -1,15 +1,12 @@
 # -*- docker-image-name: "algoritmosrw/corrector" -*-
 
-FROM ubuntu:bionic
+FROM ubuntu:focal-20200423
 
-RUN apt-get update     && \
-    apt-get upgrade -y && \
-    apt-get install -y gcc gcc-multilib g++ clang      \
-                       make valgrind time python3 perl \
-                       openjdk-11-jdk-headless         \
-                       libgtest-dev python3-jinja2 &&  \
-    make -f /usr/src/googletest/googletest/make/Makefile -C /usr/local/lib \
-        gtest.a && ln -s gtest.a /usr/local/lib/libgtest.a
+RUN apt-get update && \
+    apt-get install --assume-yes --no-install-recommends       \
+        gcc g++ gcc-multilib make valgrind clang clang-format  \
+        perl python3 openjdk-11-jdk-headless libgtest-dev time \
+        python3-jinja2 python3-yaml wspanish
 
 COPY ["*.py", "*.j2", "/"]
 
