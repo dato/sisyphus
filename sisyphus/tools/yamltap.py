@@ -10,13 +10,16 @@ con el script pruebas.sh.
 """
 
 import argparse
-import collections
 import enum
 import subprocess
 import sys
 import textwrap
 
+from typing import Dict, List, Optional
+
 import yaml
+
+from pydantic import BaseModel, Field, ValidationError
 
 
 class Result(enum.Enum):
@@ -25,7 +28,20 @@ class Result(enum.Enum):
     # TODO: SKIP, WARN
 
 
-Test = collections.namedtuple("Test", "name, args, stdin, stdout, stderr, retcode")
+class Test(BaseModel):
+    name: str
+    program: Optional[str]
+    args: List[str] = []  # TODO: use pydantic.Field.
+    stdin: Optional[str]
+    # Expected return code
+    retcode: int = 0
+    # These, if present, must match exactly.
+    stdout: Optional[str]
+    stderr: Optional[str]
+
+    class Config:
+        extra = "forbid"
+        validate_all = True
 
 
 # Soporte para !include en YAML. Versión simplificada de:
@@ -43,10 +59,6 @@ def yaml_include(loader: IncludeLoader, node: yaml.Node) -> str:
 
 
 yaml.add_constructor("!include", yaml_include, IncludeLoader)
-
-##
-## La primera parte del archivo genera archivos compatibles con pruebas.sh.
-##
 
 
 def parse_args():
@@ -75,18 +87,21 @@ def main():
     try:
         with open(args.tests) as ymlfile:
             parse = yaml.load(ymlfile, IncludeLoader)
-            tests = parse["tests"]
+            tests = [make_test(test_info, args.program) for test_info in parse["tests"]]
     except IOError as ex:
         print(f"no se pudo abrir {args.tests!r}: {ex}", file=sys.stderr)
         return 2
     except KeyError:
         print(f"no se pudo encontraron tests en {args.tests}", file=sys.stderr)
         return 2
+    except ValidationError as ex:
+        print(f"YAML no válido: {ex}", file=sys.stderr)
+        return 2
 
     if args.gen_only:
         gen_tests(tests)
     else:
-        return run_tests(tests, args.program)
+        return run_tests(tests)
 
 
 def gen_tests(tests):
@@ -94,7 +109,6 @@ def gen_tests(tests):
     """
     for num, test in enumerate(tests, 1):
         num = f"{num:02}"
-        test = make_test(test)
         files = [".test", "_in", "_out", "_err"]
         filedata = [test.name, test.stdin or "", test.stdout, test.stderr]
 
@@ -103,55 +117,39 @@ def gen_tests(tests):
                 f.write(data)
 
 
-def make_test(test_info, test_number=None):
+def make_test(test_info, program: str = None, test_number: int = None):
     """Construye un objeto Test desde un diccionario.
 
     Args:
       test_info: un diccionario obtenido del archivo YAML.
+      program (opcional): default program si test_info no lo especifica.
       number_test (opcional): número con que prefijar el nombre.
 
     Returns:
       a Test object.
-
-    Los posibles elementos de test_info son:
-
-      - name: nombre del test (required)
-      - args: argumentos al programa (default: [])
-      - stdin: entrada para el programa (default: /dev/null)
-      - stdout, stderr: salidas esperadas (estándar y de error; default: "")
-      - retcode: valor de salida esperado (default: 0)
     """
-    name = test_info["name"]
+    test_info.setdefault("program", program)
+    test = Test.parse_obj(test_info)
 
     if test_number is not None:
-        name = f"{test_number:02}: {name}"
+        test.name = f"{test_number:02}: {test.name}"
 
-    return Test(
-        name,
-        test_info.get("args", []),
-        test_info.get("stdin", None),
-        test_info.get("stdout", ""),
-        test_info.get("stderr", ""),
-        test_info.get("retcode", 0),
-    )
+    return test
 
 
-##
-## La segunda parte (no completa todavía) corre los tests y reporta diferencias.
-##
-
-
-def run_test(test, program):
+def run_test(test):
     """Corre un test y reporta las diferencias encontradas.
 
     Returns:
       una tupla (result, report_dict).
     """
+    proc_stdin = None if test.stdin is not None else subprocess.DEVNULL
+
     proc = subprocess.run(
-        [program] + test.args,
+        [test.program] + test.args,
         text=True,
         input=test.stdin,
-        stdin=None if test.stdin is not None else subprocess.DEVNULL,
+        stdin=proc_stdin,
         capture_output=True,
         errors="backslashreplace",
     )
@@ -169,15 +167,14 @@ def run_test(test, program):
     return (Result.FAIL if report else Result.OK, report)
 
 
-def run_tests(tests, program):
+def run_tests(tests):
     """
     """
     print("TAP version 13")
     print(f"1..{len(tests)}")
 
     for num, test in enumerate(tests, 1):
-        test = make_test(test)
-        result, report = run_test(test, program)
+        result, report = run_test(test)
         if result == Result.OK:
             print(f"ok {num} {test.name}")
         elif result == Result.FAIL:
