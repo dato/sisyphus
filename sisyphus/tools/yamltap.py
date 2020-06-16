@@ -73,6 +73,14 @@ def parse_args():
     parser.add_argument("tests", metavar="<tests.yml>")
     parser.add_argument("program", metavar="<binary>")
     parser.add_argument(
+        "--plan-offset",
+        type=int,
+        default=0,
+        help="""Empezar numeración de tests con un offset. Si se especifica,
+             no se imprime la versión de TAP, y el plan se imprime al final,
+             teniendo en cuenta el offset.""",
+    )
+    parser.add_argument(
         "--gen-only",
         action="store_true",
         help="Solamente generar archivos para pruebas.sh",
@@ -99,9 +107,10 @@ def main():
         return 2
 
     if args.gen_only:
+        # TODO: use args.plan_offset here?
         gen_tests(tests)
     else:
-        return run_tests(tests)
+        return run_tests(tests, offset=args.plan_offset)
 
 
 def gen_tests(tests):
@@ -167,13 +176,14 @@ def run_test(test):
     return (Result.FAIL if report else Result.OK, report)
 
 
-def run_tests(tests):
+def run_tests(tests, *, offset=0):
     """
     """
-    print("TAP version 13")
-    print(f"1..{len(tests)}")
+    if offset == 0:
+        print("TAP version 13")
+        print(f"1..{len(tests)}")
 
-    for num, test in enumerate(tests, 1):
+    for num, test in enumerate(tests, offset + 1):
         result, report = run_test(test)
         if result == Result.OK:
             print(f"ok {num} {test.name}")
@@ -185,6 +195,8 @@ def run_tests(tests):
                 )
             print(message, end="")
 
+    if offset > 0:
+        print(f"1..{len(tests) + offset}")
 
 if __name__ == "__main__":
     sys.exit(main())
