@@ -1,0 +1,5 @@
+-c requirements.txt
+flake8
+flake8-coding
+flake8-isort
+flake8-quotes

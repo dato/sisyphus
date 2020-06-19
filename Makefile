@@ -1,6 +1,11 @@
 all: sync
 
-sync: requirements.txt
+# Para producción.
+deploy: venv
+	venv/bin/pip-sync requirements.txt
+
+# Para desarrollo.
+sync: requirements.txt requirements.dev.txt
 	@echo pip-sync $^
 	@venv/bin/pip-sync $^
 

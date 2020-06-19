@@ -1,0 +1,5 @@
+;; No pyproject.toml support: https://gitlab.com/pycqa/flake8/-/issues/428
+[flake8]
+max_line_length = 88
+inline_quotes = double
+no_accept_encodings = true
