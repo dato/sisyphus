@@ -11,10 +11,12 @@ con el script pruebas.sh.
 
 import argparse
 import enum
-import subprocess
 import os
+import pathlib
 import re
+import subprocess
 import sys
+import tempfile
 import textwrap
 
 from typing import Dict, List, Optional
@@ -56,6 +58,9 @@ class Test(BaseModel):
     # Environment variables (added to the existing environment, or replacing it)
     env: Optional[Dict[str, str]]
     env_policy: Env = Env.EXTEND
+    # Support for creating and verifying files.
+    files_in: Dict[str, bytes] = Field(default_factory=dict)
+    files_out: Dict[str, bytes] = Field(default_factory=dict)
 
     class Config:
         extra = "forbid"
@@ -64,6 +69,8 @@ class Test(BaseModel):
 
 class Defaults(BaseModel):
     program: Optional[str]
+    args: Optional[List[str]]
+    env_policy: Optional[Env]
     stdout: Optional[str]
     stderr: Optional[str]
     stdout_policy: Optional[Match]
@@ -176,6 +183,8 @@ def make_test(test_info, defaults=None, test_number: int = None):
       a Test object.
     """
     if defaults is not None:
+        # Python 3.9:
+        # test_info = defaults | test_info
         test_info.update((k, v) for k, v in defaults.items() if k not in test_info)
 
     test = Test.parse_obj(test_info)
@@ -192,8 +201,10 @@ def run_test(test):
     Returns:
       una tupla (result, report_dict).
     """
+    report = {}
     proc_env = None
     proc_stdin = None if test.stdin is not None else subprocess.DEVNULL
+    program = pathlib.Path(test.program)
 
     if test.env is not None:
         if test.env_policy == Env.REPLACE:
@@ -203,16 +214,34 @@ def run_test(test):
             proc_env = os.environ.copy()
             proc_env.update(test.env)
 
-    proc = subprocess.run(
-        [test.program] + test.args,
-        env=proc_env,
-        text=True,
-        input=test.stdin,
-        stdin=proc_stdin,
-        capture_output=True,
-        errors="backslashreplace",
-    )
-    report = {}
+    with tempfile.TemporaryDirectory(prefix=program.name) as tmpdir:
+        tmpdir = pathlib.Path(tmpdir)
+
+        for filename, contents in test.files_in.items():
+            with open(tmpdir / filename, "wb") as fileobj:
+                fileobj.write(contents)
+
+        # XXX fisop shell
+        if proc_env is None:
+            proc_env = os.environ.copy()
+
+        proc_env["HOME"] = tmpdir
+
+        proc = subprocess.run(
+            [program.resolve()] + test.args,
+            env=proc_env,
+            cwd=tmpdir,
+            text=True,
+            input=test.stdin,
+            stdin=proc_stdin,
+            capture_output=True,
+            errors="backslashreplace",
+        )
+
+        for filename, expected_contents in test.files_out.items():
+            actual = open(tmpdir / filename, "rb").read()
+            if result := report_diff(expected_contents, actual, Match.LITERAL):
+                report[f"file<{filename}>"] = result
 
     if proc.returncode != test.retcode:
         report["retcode"] = f"retcode={proc.returncode}, se esperaba {test.retcode}"
