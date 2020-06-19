@@ -19,6 +19,7 @@ jwcrypto==0.7             # via github3.py
 markupsafe==1.1.1         # via jinja2
 pycparser==2.20           # via cffi
 python-dateutil==2.8.1    # via github3.py
+python-dotenv==0.13.0     # via -r requirements.in
 requests==2.24.0          # via github3.py
 six==1.15.0               # via cryptography, python-dateutil
 uritemplate==3.0.1        # via github3.py
