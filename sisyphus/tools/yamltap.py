@@ -43,7 +43,7 @@ class Result(enum.Enum):
 
 class Test(BaseModel):
     name: str
-    program: Optional[str]
+    program: str
     args: List[str] = []  # TODO: use pydantic.Field.
     stdin: Optional[str]
     # Expected return code
@@ -56,6 +56,18 @@ class Test(BaseModel):
     # Environment variables (added to the existing environment, or replacing it)
     env: Optional[Dict[str, str]]
     env_policy: Env = Env.EXTEND
+
+    class Config:
+        extra = "forbid"
+        validate_all = True
+
+
+class Defaults(BaseModel):
+    program: Optional[str]
+    stdout: Optional[str]
+    stderr: Optional[str]
+    stdout_policy: Optional[Match]
+    stderr_policy: Optional[Match]
 
     class Config:
         extra = "forbid"
@@ -89,7 +101,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("tests", metavar="<tests.yml>")
-    parser.add_argument("program", metavar="<binary>")
+    parser.add_argument("program", metavar="<binary>", nargs="?")
     parser.add_argument(
         "--plan-offset",
         type=int,
@@ -113,13 +125,21 @@ def main():
     try:
         with open(args.tests) as ymlfile:
             parse = yaml.load(ymlfile, IncludeLoader)
-            tests = [make_test(test_info, args.program) for test_info in parse["tests"]]
-    except IOError as ex:
-        print(f"no se pudo abrir {args.tests!r}: {ex}", file=sys.stderr)
+            tests_in = parse["tests"]
+            defaults = parse.get("defaults", {})
+    except (IOError, yaml.YAMLError) as ex:
+        print(f"error al procesar {args.tests!r}: {ex}", file=sys.stderr)
         return 2
     except KeyError:
         print(f"no se pudo encontraron tests en {args.tests}", file=sys.stderr)
         return 2
+
+    if args.program is not None:
+        defaults["program"] = args.program
+
+    try:
+        Defaults.parse_obj(defaults)  # Ensure they're OK.
+        tests = [make_test(test_info, defaults) for test_info in tests_in]
     except ValidationError as ex:
         print(f"YAML no válido: {ex}", file=sys.stderr)
         return 2
@@ -144,7 +164,7 @@ def gen_tests(tests):
                 f.write(data)
 
 
-def make_test(test_info, program: str = None, test_number: int = None):
+def make_test(test_info, defaults=None, test_number: int = None):
     """Construye un objeto Test desde un diccionario.
 
     Args:
@@ -155,7 +175,9 @@ def make_test(test_info, program: str = None, test_number: int = None):
     Returns:
       a Test object.
     """
-    test_info.setdefault("program", program)
+    if defaults is not None:
+        test_info.update((k, v) for k, v in defaults.items() if k not in test_info)
+
     test = Test.parse_obj(test_info)
 
     if test_number is not None:
