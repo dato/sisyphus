@@ -1,5 +1,6 @@
 Flask==1.*
 Flask-GithubApp==0.2.*
 PyYAML==5.*
+google-api-python-client==1.*
 pydantic==1.*
 python-dotenv

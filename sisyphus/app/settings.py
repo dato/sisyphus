@@ -1,6 +1,8 @@
 import functools
 import os
 
+from typing import Dict
+
 import yaml
 
 from pydantic import BaseSettings, SecretStr
@@ -24,7 +26,14 @@ class ReposApp(BaseSettings):
         )
 
 
+class Materia(BaseSettings):
+    spreadsheet_id: str
+    repos_sheet: str
+    service_account_jsonfile: str
+
+
 class Settings(BaseSettings):
+    materias: Dict[str, Materia]
     repos_app: ReposApp
 
 
