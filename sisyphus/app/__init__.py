@@ -5,9 +5,12 @@ from flask import Flask
 from flask.logging import default_handler
 
 from .repos_app import repos_hook
+from .settings import load_config
 
 
 def create_app():
+    settings = load_config()
+
     # TODO: get root path as a parameter.
     app = Flask(__name__, root_path=os.getcwd())
 
@@ -17,10 +20,9 @@ def create_app():
     logger = logging.getLogger("flask_githubapp")
     logger.addHandler(default_handler)
 
-    # TODO: read config from YAML file and environment.
-    app.config.from_pyfile("probot_config.py")
-
-    # Initialize extensions.
+    # Configure and initialize extensions.
+    repos_app = settings.repos_app
+    app.config.from_mapping(repos_app.flask_config())
     repos_hook.init_app(app)
 
     return app
