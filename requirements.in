@@ -1,5 +1,6 @@
 Flask==1.*
 Flask-GithubApp==0.2.*
+PyGithub==1.*
 PyYAML==5.*
 pydantic==1.*
 python-dotenv
