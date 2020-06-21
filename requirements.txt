@@ -7,7 +7,7 @@
 certifi==2020.4.5.2       # via requests
 cffi==1.14.0              # via cryptography
 chardet==3.0.4            # via requests
-click==7.1.2              # via flask
+click==7.1.2              # via flask, rq
 cryptography==2.9.2       # via jwcrypto
 deprecated==1.2.10        # via pygithub
 flask-githubapp==0.2.0    # via -r requirements.in
@@ -25,7 +25,9 @@ pyjwt==1.7.1              # via pygithub
 python-dateutil==2.8.1    # via github3.py
 python-dotenv==0.13.0     # via -r requirements.in
 pyyaml==5.3.1             # via -r requirements.in
+redis==3.5.3              # via rq
 requests==2.24.0          # via github3.py, pygithub
+rq==1.4.2                 # via -r requirements.in
 six==1.15.0               # via cryptography, python-dateutil
 uritemplate==3.0.1        # via github3.py
 urllib3==1.25.9           # via requests

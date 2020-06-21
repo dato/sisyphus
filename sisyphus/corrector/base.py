@@ -22,7 +22,7 @@ class CorrectorBase:
         self.alu_repo = alu_repo
         self.tests_repo = tests_repo
 
-    def corregir_entrega(self, entrega_id: str, /, *, sha: str):
+    def corregir_entrega(self, entrega_id: str, sha: str):
         tarbytes = io.BytesIO()
         now = datetime.datetime.now()
         tarobj = tarfile.open(fileobj=tarbytes, mode="w|", dereference=True)

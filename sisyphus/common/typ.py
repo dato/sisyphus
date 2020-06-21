@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Optional
 
 from github.Repository import Repository as PyGithubRepo
 
@@ -26,3 +27,12 @@ class RepoFile:
     path: str
     contents: bytes
     mode: int = 0o644
+
+
+@dataclass
+class CorregirJob:
+    repo_name: str
+    materia: str
+    head_sha: str
+    head_branch: str
+    checkrun_id: Optional[int] = None

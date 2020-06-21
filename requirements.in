@@ -4,3 +4,4 @@ PyGithub==1.*
 PyYAML==5.*
 pydantic==1.*
 python-dotenv
+rq==1.*

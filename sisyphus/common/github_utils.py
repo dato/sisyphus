@@ -3,6 +3,8 @@ import pathlib
 
 from typing import List
 
+import github
+
 from github.ContentFile import ContentFile
 
 from .typ import PyGithubRepo, RepoFile
@@ -32,3 +34,14 @@ def repo_files(gh_repo: PyGithubRepo, sha: str, subdir: str = None) -> List[Repo
         )
 
     return repo_files
+
+
+def app_auth(repo_name: str, app_id: int, private_key: str):
+    gh = github.GithubIntegration(app_id, private_key)
+
+    owner, repo = repo_name.split("/")
+    inst = gh.get_installation(owner, repo)
+    inst_auth = gh.get_access_token(inst.id.value)  # type: ignore
+    # error: "_ValuedAttribute" has no attribute "value"
+
+    return github.Github(login_or_token=inst_auth.token)

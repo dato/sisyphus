@@ -43,7 +43,7 @@ class FilesystemTestsRepo(TestsRepo):
             repo_files.extend(
                 repo_file
                 for filename in files
-                if (repo_file := make_file(dirpath.joinpath(filename))) is not None
+                if (repo_file := make_file(dirpath / filename)) is not None
             )
 
         return repo_files

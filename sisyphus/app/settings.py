@@ -1,9 +1,15 @@
 import functools
 import os
 
+from typing import Dict, List
+
 import yaml
 
-from pydantic import BaseSettings, SecretStr
+from pydantic import BaseModel, BaseSettings, SecretStr
+
+
+class Materia(BaseModel):
+    branches: List[str]
 
 
 class ReposApp(BaseSettings):
@@ -25,6 +31,7 @@ class ReposApp(BaseSettings):
 
 
 class Settings(BaseSettings):
+    materias: Dict[str, Materia]
     repos_app: ReposApp
 
 
