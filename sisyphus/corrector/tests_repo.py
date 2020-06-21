@@ -8,11 +8,6 @@ from typing import List
 from ..common.typ import RepoFile
 
 
-__all__ = [
-    "FilesystemTestsRepo",
-]
-
-
 class TestsRepo(ABC):
     @abstractmethod
     def get_tests(self) -> List[RepoFile]:
@@ -33,7 +28,7 @@ class FilesystemTestsRepo(TestsRepo):
         """
         """
         toplevel = self.tests_dir
-        repo_files = []
+        repo_files: List[RepoFile] = []
 
         def make_file(full_path):
             rel_path = full_path.relative_to(toplevel).as_posix()

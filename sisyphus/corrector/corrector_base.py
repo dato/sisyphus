@@ -6,15 +6,10 @@ import pathlib
 import subprocess
 import tarfile
 
-from typing import Type
-
+from ..common.typ import RepoFile
 from .alu_repo import AluRepo
 from .tests_repo import TestsRepo
 
-
-__all__ = [
-    "CorrectorBase",
-]
 
 CORRECTOR_BIN = "/srv/algo2/corrector/bin/worker"
 
@@ -23,7 +18,7 @@ class CorrectorBase:
     """
     """
 
-    def __init__(self, alu_repo: Type[AluRepo], tests_repo: Type[TestsRepo]):
+    def __init__(self, alu_repo: AluRepo, tests_repo: TestsRepo):
         self.alu_repo = alu_repo
         self.tests_repo = tests_repo
 
@@ -35,10 +30,10 @@ class CorrectorBase:
         test_files = self.tests_repo.get_tests()
         entrega_files = self.alu_repo.get_entrega(entrega_id, sha)
 
-        def add_file(repo_file, prefix):
+        def add_file(repo_file: RepoFile, prefix: pathlib.PurePath):
             info = tarfile.TarInfo((prefix / repo_file.path).as_posix())
             info.size = len(repo_file.contents)
-            info.mtime = now.timestamp()
+            info.mtime = int(now.timestamp())
             info.type, info.mode = tarfile.REGTYPE, repo_file.mode
             tarobj.addfile(info, io.BytesIO(repo_file.contents))
 

@@ -5,11 +5,6 @@ from ..common.github_utils import repo_files
 from ..common.typ import PyGithubRepo, RepoFile
 
 
-__all__ = [
-    "DefaultGithubRepo",
-]
-
-
 class AluRepo(ABC):
     @abstractmethod
     def get_entrega(self, entrega_id: str, /, sha: str) -> List[RepoFile]:
@@ -18,7 +13,7 @@ class AluRepo(ABC):
         ...
 
 
-class DefaultGithubRepo(AluRepo):
+class GithubAluRepo(AluRepo):
     """AluRepo en que que el id de entrega dobla como subdirectorio."""
 
     def __init__(self, alu_repo: PyGithubRepo):

@@ -13,3 +13,4 @@ flake8-pep3101
 flake8-polyfill
 flake8-quotes
 flake8-string-format
+mypy

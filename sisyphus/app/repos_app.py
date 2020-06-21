@@ -2,7 +2,7 @@
 
 import logging
 
-from flask_githubapp import GitHubApp
+from flask_githubapp import GitHubApp  # type: ignore
 
 
 __all__ = [

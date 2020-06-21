@@ -3,6 +3,8 @@ import pathlib
 
 from typing import List
 
+from github.ContentFile import ContentFile
+
 from .typ import PyGithubRepo, RepoFile
 
 
@@ -16,6 +18,9 @@ def repo_files(gh_repo: PyGithubRepo, sha: str, subdir: str = None) -> List[Repo
     subdir = subdir.rstrip("/") if subdir else ""
     contents = gh_repo.get_contents(subdir, sha)
     repo_files = []
+
+    if isinstance(contents, ContentFile):
+        contents = [contents]
 
     for entry in contents:
         if entry.type != "file":
