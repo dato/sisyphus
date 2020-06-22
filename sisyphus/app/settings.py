@@ -7,6 +7,8 @@ import yaml
 
 from pydantic import BaseModel, BaseSettings, SecretStr
 
+from ..common.yaml import IncludeLoader
+
 
 class Materia(BaseModel):
     branches: List[str]
@@ -44,4 +46,5 @@ def load_config():
     """
     conffile = os.environ.get("SISYPHUS_CONF", "sisyphus.yaml")
     with open(conffile) as yml:
-        return Settings(**yaml.safe_load(yml))
+        conf_dict = yaml.load(yml, IncludeLoader)
+        return Settings(**conf_dict)

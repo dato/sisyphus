@@ -27,7 +27,8 @@ repos:
     - id: trailing-whitespace
     - id: check-ast
     - id: check-json
-    - id: check-yaml
+    # https://github.com/pre-commit/pre-commit-hooks/issues/103
+    # - id: check-yaml
     - id: check-merge-conflict
     - id: check-vcs-permalinks
     - id: check-added-large-files
