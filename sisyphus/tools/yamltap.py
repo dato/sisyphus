@@ -25,6 +25,8 @@ import yaml
 
 from pydantic import BaseModel, Field, ValidationError
 
+from ..common.yaml import IncludeLoader
+
 
 class Env(str, enum.Enum):
     EXTEND = "extend"
@@ -79,23 +81,6 @@ class Defaults(BaseModel):
     class Config:
         extra = "forbid"
         validate_all = True
-
-
-# Soporte para !include en YAML. Versión simplificada de:
-# https://gist.github.com/joshbode/569627ced3076931b02f
-# (siempre leemos el archivo como cadena, no YAML recursivo).
-
-
-class IncludeLoader(yaml.SafeLoader):
-    pass
-
-
-def yaml_include(loader: IncludeLoader, node: yaml.Node) -> str:
-    with open(loader.construct_scalar(node)) as f:
-        return f.read()
-
-
-yaml.add_constructor("!include", yaml_include, IncludeLoader)
 
 
 def parse_args():
