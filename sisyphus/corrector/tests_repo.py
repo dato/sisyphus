@@ -31,15 +31,18 @@ class FilesystemTestsRepo(TestsRepo):
         repo_files: List[RepoFile] = []
 
         def make_file(full_path):
+            stat = full_path.stat()
             rel_path = full_path.relative_to(toplevel).as_posix()
             try:
                 with open(full_path, "rb") as fileobj:
-                    return RepoFile(path=rel_path, contents=fileobj.read())
+                    return RepoFile(
+                        path=rel_path, contents=fileobj.read(), mode=stat.st_mode
+                    )
             except IOError as ex:
                 self.logger.warn(f"could not read {full_path}: {ex}")
 
         for dirname, _dirs, files in os.walk(toplevel, followlinks=True):
-            dirpath = pathlib.PurePath(dirname)
+            dirpath = pathlib.Path(dirname)
             repo_files.extend(
                 repo_file
                 for filename in files
