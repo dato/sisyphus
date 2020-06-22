@@ -5,10 +5,10 @@ import re
 
 from flask_githubapp import GitHubApp  # type: ignore
 
-from ..common.typ import CorregirJob
+from ..common.typ import AppInstallationTokenAuth, CorregirJob, Repo
+from ..corrector.tasks import corregir_algo2
 from .queue import task_queue
 from .settings import load_config
-from .tasks import corregir_algo2
 
 
 __all__ = [
@@ -16,6 +16,19 @@ __all__ = [
 ]
 
 repos_hook = GitHubApp()
+
+
+def app_installation_token_auth() -> AppInstallationTokenAuth:
+    """Obtiene el token de autenticación del objeto GitHubApp.
+    """
+    client = repos_hook.installation_client
+    session_auth = client.session.auth
+    # Para poder usar github3.py en el worker, se necesita tanto el token
+    # como su fecha de expiración. Para PyGithub haría falta solamente el
+    # token.
+    return AppInstallationTokenAuth(
+        token=session_auth.token, expires_at=session_auth.expires_at_str,
+    )
 
 
 @repos_hook.on("check_suite.requested")
@@ -37,10 +50,11 @@ def on_checksuite():
     else:
         logger.info(f"enqueuing check-run job for {repo_full}@{branch}")
         job = CorregirJob(
-            repo_name=repo_full,
+            repo=Repo(repo_full),
             materia="algo2",  # XXX
             head_sha=suite["head_sha"],
             head_branch=branch,
+            installation_auth=app_installation_token_auth(),
             checkrun_id=None,  # TODO: create check run to pass it along.
         )
         task_queue.enqueue(corregir_algo2, job)
