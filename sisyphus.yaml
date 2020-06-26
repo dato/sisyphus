@@ -2,4 +2,5 @@ repos_app:
   key_path: .repos.pem
   endpoint: /hooks/repos
 materias:
+  orga: !include conf/orga.yaml
   algo2: !include conf/algo2.yaml

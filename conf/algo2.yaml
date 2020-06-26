@@ -1,4 +1,4 @@
-branches:
+entregas:
   - tp0
   - tp1
   - tp2
@@ -10,3 +10,4 @@ branches:
   - lista
   - pila
   - vector
+checks: {}

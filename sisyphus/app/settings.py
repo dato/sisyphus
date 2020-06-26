@@ -1,17 +1,14 @@
 import functools
 import os
 
-from typing import Dict, List
+from typing import Dict
 
 import yaml
 
-from pydantic import BaseModel, BaseSettings, SecretStr
+from pydantic import BaseSettings, SecretStr
 
 from ..common.yaml import IncludeLoader
-
-
-class Materia(BaseModel):
-    branches: List[str]
+from ..corrector.typ import Materia
 
 
 class ReposApp(BaseSettings):
