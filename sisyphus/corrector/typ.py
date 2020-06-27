@@ -33,6 +33,7 @@ class Entrega:
       • modalidad: si la entrega es grupal, o individual.
     """
 
+    name: str
     branch: str
     alu_dir: str
     checks: List[str]
@@ -43,6 +44,7 @@ class Materia:
     """Clase que representa la configuración de una materia.
     """
 
+    name: str
     entregas: Dict[str, Entrega]
     checks: Dict[str, Check] = field(default_factory=dict)
 
@@ -65,6 +67,7 @@ class Materia:
             # si todas tienen los atributos default.
             entregas = {e: {} for e in entregas}
         for entrega, attrs in entregas.items():
+            attrs["name"] = entrega
             attrs.setdefault("branch", entrega)
             attrs.setdefault("alu_dir", entrega)
             attrs.setdefault("checks", [entrega])

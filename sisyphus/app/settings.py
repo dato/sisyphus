@@ -43,5 +43,8 @@ def load_config():
     """
     conffile = os.environ.get("SISYPHUS_CONF", "sisyphus.yaml")
     with open(conffile) as yml:
-        conf_dict = yaml.load(yml, IncludeLoader)
-        return Settings(**conf_dict)
+        conf = yaml.load(yml, IncludeLoader)
+        for materia, attrs in conf["materias"].items():
+            # El nombre de cada materia viene de la clave del diccionario.
+            attrs["name"] = materia
+        return Settings(**conf)
