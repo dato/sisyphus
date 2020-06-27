@@ -8,6 +8,5 @@ entregas:
       - datalab
 checks:
   datalab:
-    name: Pruebas datalab
     alu_files:
       - bits.c
