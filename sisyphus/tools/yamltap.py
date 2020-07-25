@@ -16,6 +16,7 @@ import sys
 import tempfile
 import textwrap
 
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 import yaml
@@ -36,7 +37,7 @@ class Match(str, enum.Enum):
     SINGLE_REGEX = "multiline_regex"
 
 
-class Result(enum.Enum):
+class Outcome(enum.Enum):
     OK = enum.auto()
     FAIL = enum.auto()
     # TODO: SKIP, WARN
@@ -79,6 +80,13 @@ class Defaults(BaseModel):
     class Config:
         extra = "forbid"
         validate_all = True
+
+
+@dataclass
+class TestResult:
+    test: Test
+    outcome: Outcome
+    details: Dict
 
 
 def parse_args():
@@ -126,8 +134,13 @@ def main():
     except ValidationError as ex:
         print(f"YAML no válido: {ex}", file=sys.stderr)
         return 2
+    else:
+        results = [run_test(test) for test in tests]
+        output = format_tap(results, offset=args.plan_offset)
 
-    return run_tests(tests, offset=args.plan_offset)
+    print(output, end="")
+
+    return sum(r.outcome == Outcome.FAIL for r in results)
 
 
 def make_test(test_info, defaults=None, test_number: int = None):
@@ -154,11 +167,8 @@ def make_test(test_info, defaults=None, test_number: int = None):
     return test
 
 
-def run_test(test):
-    """Corre un test y reporta las diferencias encontradas.
-
-    Returns:
-      una tupla (result, report_dict).
+def run_test(test: Test) -> TestResult:
+    """Corre un test y reporta los errores encontrados.
     """
     report = {}
     proc_env = None
@@ -220,30 +230,35 @@ def run_test(test):
         if result := report_diff(test.stderr, proc.stderr, test.stderr_policy):
             report["stderr"] = result
 
-    return (Result.FAIL if report else Result.OK, report)
+    outcome = Outcome.FAIL if report else Outcome.OK
+    return TestResult(test, outcome, report)
 
 
-def run_tests(tests, *, offset=0):
+def format_tap(results: List[TestResult], *, offset=0) -> str:
+    """Formatea la lista de resultados en formato TAP.
     """
-    """
+    lines = []
+
     if offset == 0:
-        print("TAP version 13")
-        print(f"1..{len(tests)}")
+        lines.append("TAP version 13")
+        lines.append(f"1..{len(results)}")
 
-    for num, test in enumerate(tests, offset + 1):
-        result, report = run_test(test)
-        if result == Result.OK:
-            print(f"ok {num} {test.name}")
-        elif result == Result.FAIL:
+    for num, result in enumerate(results, offset + 1):
+        test, outcome, details = result.test, result.outcome, result.details
+        if outcome == Outcome.OK:
+            lines.append(f"ok {num} {test.name}")
+        elif outcome == Outcome.FAIL:
             message = f"not ok {num} {test.name}\n"
-            if report:
+            if details:
                 message += textwrap.indent(
-                    yaml.dump(report, explicit_start=True, explicit_end=True), "  "
+                    yaml.dump(details, explicit_start=True, explicit_end=True), "  "
                 )
-            print(message, end="")
+            lines.append(message, end="")
 
     if offset > 0:
-        print(f"1..{len(tests) + offset}")
+        lines.append(f"1..{len(results) + offset}")
+
+    return "\n".join(lines + [""])
 
 
 def report_diff(expected: str, actual: str, policy: Match):
