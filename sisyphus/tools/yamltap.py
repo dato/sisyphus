@@ -233,13 +233,13 @@ def run_test(test: Test) -> TestResult:
             if result := report_diff(expected_contents, actual, Match.LITERAL):
                 report[f"file<{filename}>"] = result
 
-    if (
-        test.retcode == -1
-        and proc.returncode == 0
-        or test.retcode != -1
-        and proc.returncode != test.retcode
-    ):
-        report["retcode"] = f"retcode={proc.returncode}, se esperaba {test.retcode}"
+    if test.retcode == -1 and proc.returncode == 0:
+        report["return code"] = "se esperaba un estado de salida distinto de cero"
+
+    if test.retcode != -1 and proc.returncode != test.retcode:
+        report[
+            "estado de salida"
+        ] = f"se esperaba {test.retcode}, se obtuvo {proc.returncode}"
 
     # TODO: diff línea a línea, como en csvdiff.py
 
