@@ -7,6 +7,7 @@ en formato TAP (Test Anything Protocol).
 """
 
 import argparse
+import difflib
 import enum
 import json
 import os
@@ -18,7 +19,7 @@ import tempfile
 import textwrap
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 
@@ -26,6 +27,11 @@ from pydantic import BaseModel, Field, ValidationError
 
 from ..common import github_tap
 from ..common.yaml import IncludeLoader
+
+
+MAX_DIFFER_LINES = 15
+MAX_UNIFIED_LINES = 25
+UNIFIED_DIFF_TRUNC = 40
 
 
 class Env(str, enum.Enum):
@@ -71,6 +77,7 @@ class Test(BaseModel):
 
 
 class Defaults(BaseModel):
+    # Elements present here can be present in a "defaults" section of the YAML file.
     program: Optional[str]
     args: Optional[List[str]]
     env_policy: Optional[Env]
@@ -191,8 +198,18 @@ def make_test(test_info, defaults=None, test_number: int = None):
 
 def run_test(test: Test) -> TestResult:
     """Corre un test y reporta los errores encontrados.
+
+    El campo "details" de TestResult es un diccionario con posibles claves
+    literales:
+
+      • stdout
+      • stderr
+      • retcode
+      • file<FILENAME>
+
+    FIXME XXX TODO: Stop abusing key names in update_details().
     """
-    report = {}
+    details: Dict[str, str] = {}
     proc_env = None
     proc_stdin = None if test.stdin is not None else subprocess.DEVNULL
     program = pathlib.Path(test.program)
@@ -231,27 +248,25 @@ def run_test(test: Test) -> TestResult:
 
         for filename, expected_contents in test.files_out.items():
             actual = open(tmpdir / filename, "rb").read()
-            if result := report_diff(expected_contents, actual, Match.LITERAL):
-                report[f"file<{filename}>"] = result
+            result = report_diff(expected_contents, actual, Match.LITERAL)
+            update_details(details, result, f"file<{filename}>")
 
     if test.retcode == -1 and proc.returncode == 0:
-        report["return code"] = "se esperaba un estado de salida distinto de cero"
+        details["return code"] = "se esperaba un estado de salida distinto de cero"
 
     if test.retcode != -1 and proc.returncode != test.retcode:
-        report[
+        details[
             "estado de salida"
         ] = f"se esperaba {test.retcode}, se obtuvo {proc.returncode}"
 
-    # TODO: diff línea a línea, como en csvdiff.py
+    stdout_diff = report_diff(test.stdout, proc.stdout, test.stdout_policy)
+    stderr_diff = report_diff(test.stderr, proc.stderr, test.stderr_policy)
 
-    if result := report_diff(test.stdout, proc.stdout, test.stdout_policy):
-        report["stdout"] = result
+    update_details(details, stdout_diff, "stdout")
+    update_details(details, stderr_diff, "stderr")
 
-    if result := report_diff(test.stderr, proc.stderr, test.stderr_policy):
-        report["stderr"] = result
-
-    outcome = Outcome.FAIL if report else Outcome.OK
-    return TestResult(test, outcome, report)
+    outcome = Outcome.FAIL if details else Outcome.OK
+    return TestResult(test, outcome, details)
 
 
 def format_tap(results: List[TestResult], *, offset=0) -> str:
@@ -294,19 +309,109 @@ def format_checkrun(results: List[TestResult]) -> Dict:
     return dict(conclusion=conclusion, output=output)
 
 
-def report_diff(expected: Optional[str], actual: str, policy: Match):
-    if policy == Match.IGNORE or expected is None:
-        return
+def report_diff(
+    expected: Optional[str], actual: str, policy: Match
+) -> Optional[Tuple[str, str]]:
+    """Calcula las diferencias entre el texto obtenido, y el esperado.
 
-    if policy == Match.LITERAL:
-        if expected != actual:
-            # TODO: better reporting
-            return f"{actual}, se esperaba {expected}"
+    Si no hay diferencias conforma a la política especificada, la función devuelve
+    None. En caso contrario, devuelve siempre una tupla de dos cadenas, donde la
+    segunda siempre es un diff (quizás no completo) entre esperado y obtenido.
+
+    La primera cadena es una breve sinopsis de las diferencias encontradas (cantidad
+    de caracteres, cantidad de líneas, número de líneas en común, etc.); solo se
+    calcula si el diff es mayor a las dimensiones especificadas en MAX_DIFFER_LINES
+    y MAX_UNIFIED_LINES. En ese caso, se incluye la descripción, y se trunca el diff
+    a UNIFIED_DIFF_TRUNC líneas.
+    """
+    if policy == Match.IGNORE or expected is None:
+        return None
 
     if policy == Match.SINGLE_REGEX:
         regex = re.compile(expected, re.M)
-        if not regex.search(actual):
-            return f"{actual}\nno contiene regex\n{regex.pattern}"
+        if regex.search(actual):
+            return None
+        else:
+            return f"debe coincidir con la expresión regular: `{regex.pattern}`", ""
+
+    assert policy == Match.LITERAL  # TODO: MULTI_REGEX not supported yet
+
+    if expected == actual:
+        return None
+
+    if expected == "":
+        return "no se esperaba salida alguna", ""
+
+    actual_lines = actual.splitlines(keepends=True)
+    expected_lines = expected.splitlines(keepends=True)
+
+    actual_nlines = len(actual_lines)
+    expected_nlines = len(expected_lines)
+
+    matcher_lines = difflib.ndiff(expected_lines, actual_lines)
+
+    # Estos "filenames" descriptivos aparecerán con las líneas --- y +++ iniciales.
+
+    missing = "líneas con '-' faltan"
+    incorrect = "líneas con '+' no son correctas"
+
+    # Usamos la siguiente heurística: si el total de líneas en cada lado es menor a
+    # 15, imprimimos directamente el resultado del SequenceMatcher, que probablemente
+    # es más legible que el unified diff.
+
+    if expected_nlines <= MAX_DIFFER_LINES and actual_nlines <= MAX_DIFFER_LINES:
+        lines = [f"--- {missing}\n", f"+++ {incorrect}\n"]
+        lines.extend(re.sub(r"^\?", " ", line) for line in matcher_lines)
+        return "", "".join(lines)
+
+    # Si no, imprimiremos un unified diff. Lo imprimimos directo si tiene menos de
+    # 20 líneas en total.
+
+    unified_diff = list(
+        difflib.unified_diff(expected_lines, actual_lines, missing, incorrect)
+    )
+
+    if len(unified_diff) < MAX_UNIFIED_LINES:
+        return "", "".join(unified_diff)
+
+    # Si no, ofrecemos una sinopsis de las líneas obtenidas vs esperadas, e imprimimos
+    # un subset del unified diff.
+
+    desc = ""
+    num_common = sum(line.startswith("  ") for line in matcher_lines)
+    actual_len = len(actual)
+    expected_len = len(expected)
+
+    if expected_nlines != actual_nlines:
+        desc += f"debe contener {expected_nlines} línas, se obtuvo {actual_nlines}"
+        if num_common:
+            desc += f" (de las cuales {num_common} son correctas)"
+    elif expected_len != actual_len:
+        desc += f"contiene {actual_len} caracteres pero se esperaba {expected_len}"
+        if num_common:
+            desc += f" (de {actual_nlines} líneas, {num_common} son correctas)"
+
+    if not num_common:
+        if not desc:
+            desc = "la salida coincide en número de líneas, pero ninguna es correcta"
+        else:
+            desc += " (ninguna línea es correcta)"
+
+    skipped = len(unified_diff) - UNIFIED_DIFF_TRUNC
+    truncated = unified_diff[:UNIFIED_DIFF_TRUNC] + [f"... {skipped} more lines"]
+
+    return desc, "".join(truncated)
+
+
+def update_details(details_dict, diff_result, key_name):
+    """
+    """
+    if diff_result:
+        desc, diff = diff_result
+        if desc and diff:
+            details_dict[f"{key_name} {desc}"] = diff
+        else:
+            details_dict[f"{key_name}"] = desc or diff
 
 
 if __name__ == "__main__":
