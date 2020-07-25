@@ -4,9 +4,6 @@
 
 Las pruebas se especifican en formato YAML, la salida se reporta
 en formato TAP (Test Anything Protocol).
-
-También puede generar archivos NN.test/NN_{in,out,err} compatibles
-con el script pruebas.sh.
 """
 
 import argparse
@@ -88,8 +85,6 @@ def parse_args():
 
     Comúnmente, recibe el archivo con las definiciones de los tests, y el
     programa a correr.
-
-    La opción --gen-only fuerza la generación de archivos para pruebas.sh.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("tests", metavar="<tests.yml>")
@@ -101,11 +96,6 @@ def parse_args():
         help="""Empezar numeración de tests con un offset. Si se especifica,
              no se imprime la versión de TAP, y el plan se imprime al final,
              teniendo en cuenta el offset.""",
-    )
-    parser.add_argument(
-        "--gen-only",
-        action="store_true",
-        help="Solamente generar archivos para pruebas.sh",
     )
     return parser.parse_args()
 
@@ -136,24 +126,7 @@ def main():
         print(f"YAML no válido: {ex}", file=sys.stderr)
         return 2
 
-    if args.gen_only:
-        # TODO: use args.plan_offset here?
-        gen_tests(tests)
-    else:
-        return run_tests(tests, offset=args.plan_offset)
-
-
-def gen_tests(tests):
-    """Genera archivos .test, _in, _out y _err a partir de YAML.
-    """
-    for num, test in enumerate(tests, 1):
-        num = f"{num:02}"
-        files = [".test", "_in", "_out", "_err"]
-        filedata = [test.name, test.stdin or "", test.stdout, test.stderr]
-
-        for fname, data in zip(files, filedata):
-            with open(f"{num}{fname}", "w") as f:
-                f.write(data)
+    return run_tests(tests, offset=args.plan_offset)
 
 
 def make_test(test_info, defaults=None, test_number: int = None):
