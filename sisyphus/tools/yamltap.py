@@ -47,7 +47,7 @@ class Test(BaseModel):
     program: str
     args: List[str] = []  # TODO: use pydantic.Field.
     stdin: Optional[str]
-    # Expected return code
+    # Expected return code (specify -1 for non-zero)
     retcode: int = 0
     # These, if present, must match in the specified match policy.
     stdout: Optional[str]
@@ -201,7 +201,12 @@ def run_test(test):
             if result := report_diff(expected_contents, actual, Match.LITERAL):
                 report[f"file<{filename}>"] = result
 
-    if proc.returncode != test.retcode:
+    if (
+        test.retcode == -1
+        and proc.returncode == 0
+        or test.retcode != -1
+        and proc.returncode != test.retcode
+    ):
         report["retcode"] = f"retcode={proc.returncode}, se esperaba {test.retcode}"
 
     # TODO: diff línea a línea, como en csvdiff.py
