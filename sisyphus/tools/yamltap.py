@@ -74,6 +74,7 @@ class Defaults(BaseModel):
     stderr: Optional[str]
     stdout_policy: Optional[Match]
     stderr_policy: Optional[Match]
+    files_in: Optional[Dict[str, bytes]]
 
     class Config:
         extra = "forbid"
