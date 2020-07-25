@@ -2,6 +2,8 @@ Flask==1.*
 Flask-GithubApp==0.2.*
 PyGithub==1.*
 PyYAML==5.*
+more-itertools==8.*
 pydantic==1.*
 python-dotenv
 rq==1.*
+git+https://github.com/python-tap/tappy#egg=tap.py  # Need fix for #111.

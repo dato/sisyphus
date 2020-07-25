@@ -18,6 +18,7 @@ itsdangerous==1.1.0       # via flask
 jinja2==2.11.2            # via flask
 jwcrypto==0.7             # via github3.py
 markupsafe==1.1.1         # via jinja2
+more-itertools==8.4.0     # via -r requirements.in
 pycparser==2.20           # via cffi
 pydantic==1.5.1           # via -r requirements.in
 pygithub==1.51            # via -r requirements.in
@@ -29,6 +30,7 @@ redis==3.5.3              # via rq
 requests==2.24.0          # via github3.py, pygithub
 rq==1.4.2                 # via -r requirements.in
 six==1.15.0               # via cryptography, python-dateutil
+git+https://github.com/python-tap/tappy#egg=tap.py  # via -r requirements.in
 uritemplate==3.0.1        # via github3.py
 urllib3==1.25.9           # via requests
 werkzeug==1.0.1           # via flask
