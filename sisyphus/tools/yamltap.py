@@ -34,6 +34,7 @@ class Env(str, enum.Enum):
 
 
 class Match(str, enum.Enum):
+    IGNORE = "ignore"
     LITERAL = "literal"
     MULTI_REGEX = "regex"
     SINGLE_REGEX = "multiline_regex"
@@ -243,13 +244,11 @@ def run_test(test: Test) -> TestResult:
 
     # TODO: diff línea a línea, como en csvdiff.py
 
-    if test.stdout is not None:
-        if result := report_diff(test.stdout, proc.stdout, test.stdout_policy):
-            report["stdout"] = result
+    if result := report_diff(test.stdout, proc.stdout, test.stdout_policy):
+        report["stdout"] = result
 
-    if test.stderr is not None:
-        if result := report_diff(test.stderr, proc.stderr, test.stderr_policy):
-            report["stderr"] = result
+    if result := report_diff(test.stderr, proc.stderr, test.stderr_policy):
+        report["stderr"] = result
 
     outcome = Outcome.FAIL if report else Outcome.OK
     return TestResult(test, outcome, report)
@@ -295,7 +294,10 @@ def format_checkrun(results: List[TestResult]) -> Dict:
     return dict(conclusion=conclusion, output=output)
 
 
-def report_diff(expected: str, actual: str, policy: Match):
+def report_diff(expected: Optional[str], actual: str, policy: Match):
+    if policy == Match.IGNORE or expected is None:
+        return
+
     if policy == Match.LITERAL:
         if expected != actual:
             # TODO: better reporting
