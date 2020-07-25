@@ -204,8 +204,8 @@ def run_test(test: Test) -> TestResult:
             proc_env = os.environ.copy()
             proc_env.update(test.env)
 
-    with tempfile.TemporaryDirectory(prefix=program.name) as tmpdir:
-        tmpdir = pathlib.Path(tmpdir)
+    with tempfile.TemporaryDirectory(prefix=program.name) as tmpname:
+        tmpdir = pathlib.Path(tmpname)
 
         for filename, contents in test.files_in.items():
             with open(tmpdir / filename, "wb") as fileobj:
@@ -215,10 +215,10 @@ def run_test(test: Test) -> TestResult:
         if proc_env is None:
             proc_env = os.environ.copy()
 
-        proc_env["HOME"] = tmpdir
+        proc_env["HOME"] = tmpname
 
         proc = subprocess.run(
-            [program.resolve()] + test.args,
+            [program.resolve().as_posix()] + test.args,
             env=proc_env,
             cwd=tmpdir,
             text=True,
