@@ -50,17 +50,22 @@ def create_runs(payload):
     branch = suite["head_branch"]
     repo_full = repo["full_name"]
 
-    if not re.match(r"(algorw-alu|fiubatps)/algo2_2020a_", repo_full):  # XXX
+    if re.match(r"^0+$", suite["before"]):
+        logger.info(f"ignoring check_suite event for just-created {repo_full}@{branch}")
+        return
+    elif m := re.match(r"(algorw-alu|fiubatps)/(algo2)_2020a_", repo_full):
+        materia = m.group(2)
+    else:
         logger.debug(f"ignoring check_suite request from {repo_full}")
         return
 
-    if branch not in config.materias["algo2"].branches:
+    if branch not in config.materias[materia].branches:
         logging.warn(f"ignoring check_suite for branch {branch!r} in {repo_full}")
     else:
         logger.info(f"enqueuing check-run job for {repo_full}@{branch}")
         job = CorregirJob(
             repo=Repo(repo_full),
-            materia="algo2",  # XXX
+            materia=materia,
             head_sha=suite["head_sha"],
             head_branch=branch,
             installation_auth=app_installation_token_auth(),
