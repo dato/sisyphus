@@ -32,12 +32,21 @@ def app_installation_token_auth() -> AppInstallationTokenAuth:
 
 
 @repos_hook.on("check_suite.requested")
-def on_checksuite():
+def checksuite_requested():
+    create_runs(repos_hook.payload)
+
+
+@repos_hook.on("check_suite.rerequested")
+def checksuite_rerequested():
+    create_runs(repos_hook.payload)
+
+
+def create_runs(payload):
     config = load_config()
     logger = logging.getLogger(__name__)
 
-    repo = repos_hook.payload["repository"]
-    suite = repos_hook.payload["check_suite"]
+    repo = payload["repository"]
+    suite = payload["check_suite"]
     branch = suite["head_branch"]
     repo_full = repo["full_name"]
 
