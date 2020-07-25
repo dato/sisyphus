@@ -1,13 +1,21 @@
 import logging
 import pathlib
 
-from typing import List
+from typing import List, Set
 
 import github
 
 from github.ContentFile import ContentFile
+from github.GithubException import GithubException
 
 from .typ import PyGithubRepo, RepoFile
+
+
+def exception_codes(gh_exception: GithubException) -> Set[str]:
+    """Devuelve todos los error codes de una excepción de PyGitHub.
+    """
+    errors = gh_exception.data.get("errors", [])  # type: ignore
+    return {code for e in errors if (code := e.get("code"))}  # type: ignore
 
 
 def repo_files(gh_repo: PyGithubRepo, sha: str, subdir: str = None) -> List[RepoFile]:
@@ -29,9 +37,18 @@ def repo_files(gh_repo: PyGithubRepo, sha: str, subdir: str = None) -> List[Repo
             logger.warn(f"ignoring entry {entry.path!r} of type {entry.type}")
             continue
         rel_path = pathlib.PurePath(entry.path).relative_to(subdir)
-        repo_files.append(
-            RepoFile(path=rel_path.as_posix(), contents=entry.decoded_content)
-        )
+        try:
+            repo_file = RepoFile(
+                path=rel_path.as_posix(), contents=entry.decoded_content
+            )
+        except GithubException as ex:
+            if "too_large" in exception_codes(ex):
+                # FIXME: usar la Git Data API para descargar el archivo?
+                logger.warn(f"por su tamaño no se pudo descargar {entry.path!r}")
+            else:
+                raise ex from ex
+        else:
+            repo_files.append(repo_file)
 
     return repo_files
 
