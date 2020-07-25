@@ -4,6 +4,7 @@ import pathlib
 from typing import List, Set
 
 import github
+import github3  # type: ignore
 
 from github3.session import GitHubSession  # type: ignore
 from github.ContentFile import ContentFile
@@ -11,7 +12,7 @@ from github.GithubException import GithubException
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-from .typ import PyGithubRepo, RepoFile
+from .typ import PyGithubRepo, Repo, RepoFile
 
 
 def exception_codes(gh_exception: GithubException) -> Set[str]:
@@ -64,6 +65,18 @@ def repo_files(gh_repo: PyGithubRepo, sha: str, subdir: str = None) -> List[Repo
             repo_files.append(repo_file)
 
     return repo_files
+
+
+def github3_installation_auth(repo: Repo, app_id: int, private_key: bytes):
+    """
+    """
+    gh3 = github3.GitHub()
+    gh3.login_as_app(private_key, app_id)
+
+    installation = gh3.app_installation_for_repository(repo.owner, repo.name)
+    gh3.login_as_app_installation(private_key, app_id, installation.id)
+
+    return gh3
 
 
 def app_auth(repo_name: str, app_id: int, private_key: str):
