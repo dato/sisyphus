@@ -8,6 +8,7 @@ en formato TAP (Test Anything Protocol).
 
 import argparse
 import enum
+import json
 import os
 import pathlib
 import re
@@ -23,6 +24,7 @@ import yaml
 
 from pydantic import BaseModel, Field, ValidationError
 
+from ..common import github_tap
 from ..common.yaml import IncludeLoader
 
 
@@ -89,6 +91,14 @@ class TestResult:
     details: Dict
 
 
+class OutputFormat(enum.Enum):
+    TAP = "tap"
+    CHECKRUN = "checkrun"
+
+    def __str__(self):
+        return self.value
+
+
 def parse_args():
     """Parser para los argumentos del programa.
 
@@ -98,6 +108,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("tests", metavar="<tests.yml>")
     parser.add_argument("program", metavar="<binary>", nargs="?")
+    parser.add_argument(
+        "--out-format",
+        type=OutputFormat,
+        choices=list(OutputFormat),
+        default=OutputFormat.TAP,
+        help="Formato de salida",
+    )
     parser.add_argument(
         "--plan-offset",
         type=int,
@@ -136,7 +153,11 @@ def main():
         return 2
     else:
         results = [run_test(test) for test in tests]
+
+    if args.out_format == OutputFormat.TAP:
         output = format_tap(results, offset=args.plan_offset)
+    elif args.out_format == OutputFormat.CHECKRUN:
+        output = json.dumps(format_checkrun(results))
 
     print(output, end="")
 
@@ -259,6 +280,19 @@ def format_tap(results: List[TestResult], *, offset=0) -> str:
         lines.append(f"1..{len(results) + offset}")
 
     return "\n".join(lines + [""])
+
+
+def format_checkrun(results: List[TestResult]) -> Dict:
+    """Formatea la lista de resultados en formato como un objeto un CheckRun de Github.
+    """
+    # FIXME: Por el momento hacemos esto horroroso de aprovechar sin modificaciones
+    # el módulo github_tap que ya teníamos: convertimos a TAP, y de ahí a CheckRun.
+    # TODO: usar directamente la lista de resultados.
+
+    tap_output = format_tap(results)
+    conclusion, output = github_tap.checkrun_output(tap_output)
+
+    return dict(conclusion=conclusion, output=output)
 
 
 def report_diff(expected: str, actual: str, policy: Match):
