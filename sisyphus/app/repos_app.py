@@ -6,7 +6,7 @@ import re
 from flask_githubapp import GitHubApp  # type: ignore
 
 from ..common.typ import AppInstallationTokenAuth, CorregirJob, Repo
-from ..corrector.tasks import corregir_algo2
+from ..corrector.tasks import corregir_entrega
 from .queue import task_queue
 from .settings import load_config
 
@@ -71,4 +71,4 @@ def create_runs(payload):
             installation_auth=app_installation_token_auth(),
             checkrun_id=None,  # TODO: create check run to pass it along.
         )
-        task_queue.enqueue(corregir_algo2, job)
+        task_queue.enqueue(corregir_entrega, job)

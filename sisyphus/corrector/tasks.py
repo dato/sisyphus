@@ -12,7 +12,9 @@ from .base import CorrectorBase
 from .tests_repo import FilesystemTestsRepo
 
 
-ALGO2_TESTS = pathlib.Path("/srv/algo2/corrector/data/skel")
+TEST_PATHS = {
+    "algo2": pathlib.Path("/srv/algo2/corrector/data/skel"),
+}
 
 
 def post_checkrun(job, checkrun_attrs):
@@ -34,15 +36,14 @@ def post_checkrun(job, checkrun_attrs):
     return checkrun
 
 
-def corregir_algo2(job: CorregirJob):
+def corregir_entrega(job: CorregirJob):
     """
     """
-    assert re.match("(algorw-alu|fiubatps)/algo2_", job.repo.full_name)
     auth = job.installation_auth
 
     gh = github.Github(login_or_token=auth.token.get_secret_value())
     alu_repo = GithubAluRepo(gh.get_repo(job.repo.full_name))
-    tests_loc = FilesystemTestsRepo(ALGO2_TESTS / job.head_branch)
+    tests_loc = FilesystemTestsRepo(TEST_PATHS[job.materia] / job.head_branch)
 
     branch = job.head_branch
     corr = CorrectorBase(alu_repo, tests_loc)
@@ -56,7 +57,11 @@ def corregir_algo2(job: CorregirJob):
 
     if not (m := re.search(r"^(Todo OK|ERROR)$", output, re.M)):
         conclusion = "cancelled"
-        checkrun_output = None  # TODO: say something.
+        checkrun_output = dict(
+            title="ERROR EN ENTREGA",
+            summary="Ocurrió un error durante la corrección",
+            text=f"```\n{output}\n```",
+        )
     else:
         conclusion = "success" if m.group(1) == "Todo OK" else "failure"
         checkrun_output = dict(
