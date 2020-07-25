@@ -274,7 +274,7 @@ def format_tap(results: List[TestResult], *, offset=0) -> str:
                 message += textwrap.indent(
                     yaml.dump(details, explicit_start=True, explicit_end=True), "  "
                 )
-            lines.append(message, end="")
+            lines.append(message)
 
     if offset > 0:
         lines.append(f"1..{len(results) + offset}")

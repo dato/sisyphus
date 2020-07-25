@@ -5,6 +5,8 @@ import collections
 import re
 import textwrap
 
+from typing import List
+
 import tap.parser  # type: ignore
 
 
@@ -49,10 +51,20 @@ def tap_to_markdown(tap_results: str):
         description = WARN_RE.sub("", test.description)
         lines.append(f"- {description}{suffix}")
 
-        if test.yaml_block and (test_output := test.yaml_block["output"]):
-            test_output = f"```\n{test_output}\n```"
-            lines.append(textwrap.indent(test_output, "  "))
+        yaml_lines = []
+        yaml_block = test.yaml_block or {}
 
+        for item, data in yaml_block.items():
+            if data.count("\n") > 1:
+                if item.startswith("_"):
+                    yaml_lines.append(f"```\n{data}\n```")
+                else:
+                    yaml_lines.append(f"- {item}")
+                    yaml_lines.append(indent2(f"```\n{data}\n```\n"))
+            else:
+                yaml_lines.append(f"- {item}: {data}" if item[0] != "_" else f"{data}")
+
+        lines.append(indentjoin((yaml_lines)))
         lines.append("")
 
     if plan:
@@ -92,3 +104,13 @@ def checkrun_output(tap_results):
         conclusion = "success"
 
     return conclusion, dict(title=title, summary=summary, text=text)
+
+
+def indent2(s: str) -> str:
+    """Indents a string by two spaces."""
+    return textwrap.indent(s, "  ")
+
+
+def indentjoin(lines: List[str], level="  ") -> str:
+    """Indents a list of strings, joining them first."""
+    return textwrap.indent("\n".join(lines), level)
