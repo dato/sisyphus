@@ -69,6 +69,16 @@ def create_runs(payload):
             head_sha=suite["head_sha"],
             head_branch=branch,
             installation_auth=app_installation_token_auth(),
-            checkrun_id=None,  # TODO: create check run to pass it along.
         )
+        job.checkrun_id = create_checkrun(job)
         task_queue.enqueue(corregir_entrega, job)
+
+
+def create_checkrun(job):
+    """Crea un check_run para pasar al worker. Devuelve el checkrun id."""
+    gh3 = repos_hook.installation_client
+    repo = gh3.repository(job.repo.owner, job.repo.name)
+    checkrun = repo.create_check_run(
+        head_sha=job.head_sha, name=f"Pruebas {job.head_branch}"
+    )
+    return checkrun.id

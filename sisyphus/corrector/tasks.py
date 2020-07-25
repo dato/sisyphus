@@ -31,6 +31,7 @@ def post_checkrun(job, checkrun_attrs):
     if not checkrun:
         checkrun = repo.create_check_run(**checkrun_attrs)
     else:
+        checkrun_attrs.pop("head_sha")
         checkrun.update(**checkrun_attrs)
 
     return checkrun
