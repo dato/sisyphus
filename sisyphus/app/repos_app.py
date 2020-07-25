@@ -55,36 +55,45 @@ def create_runs(payload):
 
     # We are normally called from check_suite.(re)requested, but this could also be
     # a check_run.rerequested; in that case the check_suite is inside the check_run
-    # object.
+    # object, and we limit ourselves to retrying that one check, only.
     if "check_run" not in payload:
         suite = payload["check_suite"]
+        check_rerequested = None
     else:
         suite = payload["check_run"]["check_suite"]
+        check_rerequested = payload["check_run"]["name"]
 
-    materia = None
     repo = payload["repository"]
     branch = suite["head_branch"]
     repo_full = repo["full_name"]
 
     if not reposdb.is_repo_known(repo_full):
         logger.debug(f"ignoring check_suite request from unknown repo {repo_full}")
+        return
     elif re.match(r"^0+$", suite["before"]):
         logger.info(f"ignoring check_suite event for just-created {repo_full}@{branch}")
-    elif branch not in config.entregas:
-        logging.warn(f"ignoring check_suite for branch {branch!r} in {repo_full}")
-    elif not (m := re.search(r"/([^_]+)_", repo_full)):
-        logger.error(f"could not extract course name from {repo_full}")
-    else:
-        # TODO: remove this.
-        materia = m.group(1)
+        return
 
-    if materia:
-        logger.info(f"enqueuing check-run job for {repo_full}@{branch}")
+    try:
+        # TODO: cambiar esto por un wildcard de paths.
+        entrega = next(e for e in config.entregas.values() if e.branch == branch)
+    except StopIteration:
+        logging.warn(f"ignoring check_suite for branch {branch!r} in {repo_full}")
+        return
+
+    for check in entrega.checks:
+        check = config.checks[check]
+        if not check_rerequested or check.name == check_rerequested:
+            logger.info(f"enqueuing {check.name} for {repo_full}@{branch}")
+        else:
+            logger.debug(f"skipping {check.name}, which was not rerequested")
+            continue
         job = CorregirJob(
             repo=Repo(repo_full),
-            materia=materia,
             head_sha=suite["head_sha"],
-            head_branch=branch,
+            check=check,
+            entrega=entrega,
+            corrector=config.corrector,
             installation_auth=app_installation_token_auth(),
         )
         job.checkrun_id = create_checkrun(job)
@@ -96,7 +105,5 @@ def create_checkrun(job):
     gh3 = repos_hook.installation_client
     github_utils.configure_retries(gh3.session)
     repo = gh3.repository(job.repo.owner, job.repo.name)
-    checkrun = repo.create_check_run(
-        head_sha=job.head_sha, name=f"Pruebas {job.head_branch}"
-    )
+    checkrun = repo.create_check_run(head_sha=job.head_sha, name=job.check.name)
     return checkrun.id

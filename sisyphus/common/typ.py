@@ -6,6 +6,8 @@ from typing import Optional
 from github.Repository import Repository as PyGithubRepo
 from pydantic import BaseModel, SecretStr
 
+from ..corrector.typ import Check, Corrector, Entrega
+
 
 __all__ = [
     "PyGithubRepo",
@@ -58,9 +60,10 @@ class AppInstallationTokenAuth(BaseModel):
 
 class CorregirJob(BaseModel):
     repo: Repo
-    materia: str
     head_sha: str
-    head_branch: str
+    check: Check
+    entrega: Entrega
+    corrector: Corrector
     installation_auth: AppInstallationTokenAuth
     checkrun_id: Optional[int] = None
 

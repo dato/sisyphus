@@ -1,5 +1,9 @@
 repos_app:
   endpoint: /hooks/repos
+corrector:
+  formatter: github_tap
+  tests_path: "/srv/orga/repos/9557/test"
+  worker_path: "/srv/algo2/corrector/bin/worker"
 entregas:
   lab1:
     checks:
@@ -8,7 +12,10 @@ entregas:
   lab2:
     checks:
       - datalab
-  cachesim: {}
+  tp1:
+    alu_dir: cachesim
+    checks:
+      - cachesim
 checks:
   datalab:
     alu_files:

@@ -35,3 +35,13 @@ class Entrega:
     branch: str
     alu_dir: str
     checks: List[str]
+
+
+@dataclass
+class Corrector:
+    """
+    """
+
+    formatter: str
+    tests_path: Path
+    worker_path: Path

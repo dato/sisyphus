@@ -1,5 +1,9 @@
 repos_app:
   endpoint: /hooks/repos
+corrector:
+  formatter: v2_original
+  tests_path: "/srv/algo2/corrector/data/skel"
+  worker_path: "/srv/algo2/corrector/bin/worker"
 entregas:
   - tp0
   - tp1

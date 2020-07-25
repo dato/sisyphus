@@ -9,7 +9,7 @@ from pydantic import BaseSettings, Field, root_validator, validator
 
 from ..appbase import GithubApp
 from ..common.yaml import IncludeLoader
-from ..corrector.typ import Check, Entrega
+from ..corrector.typ import Check, Corrector, Entrega
 
 
 class ReposApp(GithubApp):
@@ -23,6 +23,7 @@ class ReposApp(GithubApp):
 
 class Settings(BaseSettings):
     entregas: Dict[str, Entrega]
+    corrector: Corrector
     repos_app: ReposApp
 
     checks: Dict[str, Check] = Field(default_factory=dict)

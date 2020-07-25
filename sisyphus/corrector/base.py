@@ -11,6 +11,7 @@ from .alu_repo import AluRepo
 from .tests_repo import TestsRepo
 
 
+# TODO: use corrector.worker_path.
 CORRECTOR_BIN = "/srv/algo2/corrector/bin/worker"
 
 
