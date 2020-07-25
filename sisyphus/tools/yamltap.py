@@ -68,8 +68,8 @@ class Test(BaseModel):
     env: Optional[Dict[str, str]]
     env_policy: Env = Env.EXTEND
     # Support for creating and verifying files.
-    files_in: Dict[str, bytes] = Field(default_factory=dict)
-    files_out: Dict[str, bytes] = Field(default_factory=dict)
+    files_in: Dict[str, str] = Field(default_factory=dict)
+    files_out: Dict[str, str] = Field(default_factory=dict)
 
     class Config:
         extra = "forbid"
@@ -226,7 +226,7 @@ def run_test(test: Test) -> TestResult:
         tmpdir = pathlib.Path(tmpname)
 
         for filename, contents in test.files_in.items():
-            with open(tmpdir / filename, "wb") as fileobj:
+            with open(tmpdir / filename, "w") as fileobj:
                 fileobj.write(contents)
 
         # XXX fisop shell
@@ -247,7 +247,7 @@ def run_test(test: Test) -> TestResult:
         )
 
         for filename, expected_contents in test.files_out.items():
-            actual = open(tmpdir / filename, "rb").read()
+            actual = open(tmpdir / filename, "r", errors="backslashreplace").read()
             result = report_diff(expected_contents, actual, Match.LITERAL)
             update_details(details, result, f"file<{filename}>")
 
