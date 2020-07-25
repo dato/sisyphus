@@ -1,17 +1,14 @@
 import functools
 import os
 
-from typing import Dict, List
+from typing import Dict
 
 import yaml
 
-from pydantic import BaseModel, BaseSettings, SecretStr
+from pydantic import BaseSettings, SecretStr
 
 from ..common.yaml import IncludeLoader
-
-
-class Materia(BaseModel):
-    branches: List[str]
+from ..corrector.typ import Materia
 
 
 class ReposApp(BaseSettings):
@@ -46,5 +43,8 @@ def load_config():
     """
     conffile = os.environ.get("SISYPHUS_CONF", "sisyphus.yaml")
     with open(conffile) as yml:
-        conf_dict = yaml.load(yml, IncludeLoader)
-        return Settings(**conf_dict)
+        conf = yaml.load(yml, IncludeLoader)
+        for materia, attrs in conf["materias"].items():
+            # El nombre de cada materia viene de la clave del diccionario.
+            attrs["name"] = materia
+        return Settings(**conf)
