@@ -61,27 +61,24 @@ def create_runs(payload):
     else:
         suite = payload["check_run"]["check_suite"]
 
+    materia = None
     repo = payload["repository"]
     branch = suite["head_branch"]
     repo_full = repo["full_name"]
 
-    if re.match(r"^0+$", suite["before"]):
-        logger.info(f"ignoring check_suite event for just-created {repo_full}@{branch}")
-        return
-    elif m := re.match(r"(algorw-alu|fiubatps)/(algo2)_2020a_", repo_full):
-        # TODO: get from either RepoDB, or hook path.
-        materia = m.group(2)
-    else:
-        logger.debug(f"ignoring check_suite request from {repo_full}")
-        return
-
-    # XXX Do something with this.
     if not reposdb.is_repo_known(repo_full):
-        logger.warning(f"cound not find {repo_full} in RepoDB")
-
-    if branch not in config.materias[materia].branches:
+        logger.debug(f"ignoring check_suite request from unknown repo {repo_full}")
+    elif re.match(r"^0+$", suite["before"]):
+        logger.info(f"ignoring check_suite event for just-created {repo_full}@{branch}")
+    elif branch not in config.entregas:
         logging.warn(f"ignoring check_suite for branch {branch!r} in {repo_full}")
+    elif not (m := re.search(r"/([^_]+)_", repo_full)):
+        logger.error(f"could not extract course name from {repo_full}")
     else:
+        # TODO: remove this.
+        materia = m.group(1)
+
+    if materia:
         logger.info(f"enqueuing check-run job for {repo_full}@{branch}")
         job = CorregirJob(
             repo=Repo(repo_full),
