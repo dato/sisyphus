@@ -91,7 +91,7 @@ def checkrun_output(tap_results):
         title = "No compila"
         conclusion = "failure"
     elif counts.fail > 0:
-        title = f"ERROR (failing: {counts.fail})"
+        title = f"ERROR (failing: {counts.fail}/{counts.expected_ok})"
         conclusion = "failure"
     elif counts.warn > 0:
         title = f"Pruebas OK (warnings: {counts.warn})"
