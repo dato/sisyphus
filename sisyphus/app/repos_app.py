@@ -60,7 +60,7 @@ def create_runs(payload):
         logger.debug(f"ignoring check_suite request from {repo_full}")
         return
 
-    if branch not in config.materias[materia].branches:
+    if branch not in config.materias[materia].entregas:
         logging.warn(f"ignoring check_suite for branch {branch!r} in {repo_full}")
     else:
         logger.info(f"enqueuing check-run job for {repo_full}@{branch}")
