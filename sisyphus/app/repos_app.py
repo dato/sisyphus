@@ -5,6 +5,7 @@ import re
 
 from flask_githubapp import GitHubApp  # type: ignore
 
+from ..common import github_utils
 from ..common.typ import AppInstallationTokenAuth, CorregirJob, Repo
 from ..corrector.tasks import corregir_entrega
 from .queue import task_queue
@@ -77,6 +78,7 @@ def create_runs(payload):
 def create_checkrun(job):
     """Crea un check_run para pasar al worker. Devuelve el checkrun id."""
     gh3 = repos_hook.installation_client
+    github_utils.configure_retries(gh3.session)
     repo = gh3.repository(job.repo.owner, job.repo.name)
     checkrun = repo.create_check_run(
         head_sha=job.head_sha, name=f"Pruebas {job.head_branch}"

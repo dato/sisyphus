@@ -5,8 +5,11 @@ from typing import List, Set
 
 import github
 
+from github3.session import GitHubSession  # type: ignore
 from github.ContentFile import ContentFile
 from github.GithubException import GithubException
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 from .typ import PyGithubRepo, RepoFile
 
@@ -16,6 +19,16 @@ def exception_codes(gh_exception: GithubException) -> Set[str]:
     """
     errors = gh_exception.data.get("errors", [])  # type: ignore
     return {code for e in errors if (code := e.get("code"))}  # type: ignore
+
+
+def configure_retries(session: GitHubSession):
+    """Configure retries for a github3 client.
+    """
+    # https://cumulusci.readthedocs.io/en/latest/_modules/cumulusci/core/github.html
+    retries = Retry(status_forcelist=(401, 502, 503, 504), backoff_factor=0.3)
+    adapter = HTTPAdapter(max_retries=retries)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
 
 
 def repo_files(gh_repo: PyGithubRepo, sha: str, subdir: str = None) -> List[RepoFile]:

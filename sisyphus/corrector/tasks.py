@@ -6,6 +6,7 @@ import sys
 import github
 import github3  # type: ignore
 
+from ..common import github_utils
 from ..common.typ import CorregirJob
 from .alu_repo import GithubAluRepo
 from .base import CorrectorBase
@@ -23,6 +24,7 @@ def post_checkrun(job, checkrun_attrs):
     # https://github.com/PyGithub/PyGithub/issues/1063
     session = github3.session.GitHubSession()
     session.app_installation_token_auth(job.installation_auth.as_dict())
+    github_utils.configure_retries(session)
 
     gh3 = github3.GitHub(session=session)
     repo = gh3.repository(job.repo.owner, job.repo.name)
