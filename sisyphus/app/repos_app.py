@@ -42,12 +42,24 @@ def checksuite_rerequested():
     create_runs(repos_hook.payload)
 
 
+@repos_hook.on("check_run.rerequested")
+def checkrun_rerequested():
+    create_runs(repos_hook.payload)
+
+
 def create_runs(payload):
     config = load_config()
     logger = logging.getLogger(__name__)
 
+    # We are normally called from check_suite.(re)requested, but this could also be
+    # a check_run.rerequested; in that case the check_suite is inside the check_run
+    # object.
+    if "check_run" not in payload:
+        suite = payload["check_suite"]
+    else:
+        suite = payload["check_run"]["check_suite"]
+
     repo = payload["repository"]
-    suite = payload["check_suite"]
     branch = suite["head_branch"]
     repo_full = repo["full_name"]
 
