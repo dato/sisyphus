@@ -5,8 +5,7 @@ from ..common.models import Model, parse_rows
 
 
 __all__ = [
-    "RepoSheet",
-    "ReposDB",
+    "RepoDB",
 ]
 
 
@@ -23,7 +22,7 @@ class RepoRow(Model):
         arbitrary_types_allowed = True
 
 
-class RepoSheet(sheets.PullDB):
+class RepoDB(sheets.PullDB):
     """Mixin para sheets.PullDB para parsear la hoja de repositorios.
     """
 
@@ -50,7 +49,7 @@ class ReposDB:
     Las hojas que se descargan y procesan son las del enum Hojas, arriba.
     """
 
-    def __init__(self, sheets: List[RepoSheet]):
+    def __init__(self, sheets: List[RepoDB]):
         self.sheets = sheets
 
     def is_repo_known(self, /, repo_full: str):

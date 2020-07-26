@@ -1,25 +1,18 @@
-"""Pseudo-DB con la lista de repositorios conocidos."""
+"""Pseudo-DB con la lista de repositorios conocidos para una materia."""
 
 from google.oauth2.service_account import Credentials
 
 from ..common.sheets import Config
-from ..repos.planilla import ReposDB, RepoSheet
-from .settings import Materia, load_config
+from ..repos.planilla import RepoDB
+from .settings import Materia
 
 
 __all__ = [
-    "make_reposdb",
+    "make_repodb",
 ]
 
 
-def make_reposdb() -> ReposDB:
-    """
-    """
-    settings = load_config()
-    return ReposDB([make_sheet(mat) for mat in settings.materias.values()])
-
-
-def make_sheet(materia: Materia) -> RepoSheet:
+def make_repodb(materia: Materia) -> RepoDB:
     """
     """
     credentials = Credentials.from_service_account_file(
@@ -31,4 +24,4 @@ def make_sheet(materia: Materia) -> RepoSheet:
         credentials=credentials,
         sheet_list=[materia.repos_sheet],
     )
-    return RepoSheet(config)
+    return RepoDB(config)
