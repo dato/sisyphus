@@ -15,6 +15,7 @@ class ReposApp(BaseSettings):
     app_id: int
     key_path: str
     endpoint: str
+    sheets_auth: str
     webhook_secret: SecretStr
 
     class Config:

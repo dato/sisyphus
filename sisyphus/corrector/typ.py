@@ -45,6 +45,7 @@ class Materia:
     """
 
     name: str
+    spreadsheet_id: str
     entregas: Dict[str, Entrega]
     checks: Dict[str, Check] = field(default_factory=dict)
 
