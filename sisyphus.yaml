@@ -1,8 +1,7 @@
 repos_app:
   key_path: .repos.pem
   endpoint: /hooks/repos
+  sheets_auth: sheets_account.json
 materias:
-  algo2:
-    spreadsheet_id: 1VLjgpKCKTEgHylQjVT0noU0MBD4NvYgXnGfoGeCRsTQ
-    repos_sheet: Repos
-    service_account_jsonfile: service_account.json
+  orga: !include conf/orga.yaml
+  algo2: !include conf/algo2.yaml

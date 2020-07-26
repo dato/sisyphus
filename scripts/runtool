@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Script genérico para correr programas en sisyphus.tools.
+#
+# Funcionamiento: se crea un enlace a runtool que coincida con el
+# nombre del módulo a cargar. El código que sigue obtiene este nombre
+# de argv[0], e importa main() desde sisyphus.tools.<NOMBRE>.
+
+MODULE="$(basename $0)"
+SCRIPT="$(realpath $0)"
+export PYTHONPATH="$(dirname ${SCRIPT%/*})"  # Dos niveles up.
+
+echo "import sys; sys.argv[0] = '$MODULE'; \
+      from sisyphus.tools.$MODULE import main; main()" | python3 - "$@"

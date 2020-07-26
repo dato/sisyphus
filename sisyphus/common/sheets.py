@@ -3,7 +3,7 @@ import threading
 from dataclasses import dataclass
 from typing import Dict, List
 
-from googleapiclient import discovery
+from googleapiclient import discovery  # type: ignore
 
 
 __all__ = ["Config", "PullDB"]

@@ -7,11 +7,16 @@ import yaml
 
 from pydantic import BaseSettings, SecretStr
 
+from ..common.yaml import IncludeLoader
+from ..corrector.typ import Materia
+
 
 class ReposApp(BaseSettings):
     app_id: int
     key_path: str
     endpoint: str
+    sheets_auth: str
+    spreadsheet_id: str
     webhook_secret: SecretStr
 
     class Config:
@@ -24,12 +29,6 @@ class ReposApp(BaseSettings):
             GITHUBAPP_SECRET=self.webhook_secret.get_secret_value(),
             GITHUBAPP_KEY=open(self.key_path, "rb").read(),
         )
-
-
-class Materia(BaseSettings):
-    spreadsheet_id: str
-    repos_sheet: str
-    service_account_jsonfile: str
 
 
 class Settings(BaseSettings):
@@ -46,4 +45,8 @@ def load_config():
     """
     conffile = os.environ.get("SISYPHUS_CONF", "sisyphus.yaml")
     with open(conffile) as yml:
-        return Settings(**yaml.safe_load(yml))
+        conf = yaml.load(yml, IncludeLoader)
+        for materia, attrs in conf["materias"].items():
+            # El nombre de cada materia viene de la clave del diccionario.
+            attrs["name"] = materia
+        return Settings(**conf)

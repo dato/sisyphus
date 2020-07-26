@@ -1,0 +1,12 @@
+entregas:
+  lab1:
+    checks:
+      - cp57
+      - ls57
+  lab2:
+    checks:
+      - datalab
+checks:
+  datalab:
+    alu_files:
+      - bits.c

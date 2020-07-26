@@ -1,11 +1,10 @@
-from typing import ClassVar, List, Optional
+from typing import ClassVar, Optional
 
 from ..common import sheets
 from ..common.models import Model, parse_rows
 
 
 __all__ = [
-    "RepoSheet",
     "ReposDB",
 ]
 
@@ -23,8 +22,10 @@ class RepoRow(Model):
         arbitrary_types_allowed = True
 
 
-class RepoSheet(sheets.PullDB):
+class ReposDB(sheets.PullDB):
     """Mixin para sheets.PullDB para parsear la hoja de repositorios.
+
+    Permite interactuar con la hoja "Repos" de una materia.
     """
 
     def parse_sheets(self, sheet_dict):
@@ -43,17 +44,7 @@ class RepoSheet(sheets.PullDB):
 
         return repos
 
-
-class ReposDB:
-    """Representación unificada de hojas "Repos" de varias planillas.
-
-    Las hojas que se descargan y procesan son las del enum Hojas, arriba.
-    """
-
-    def __init__(self, sheets: List[RepoSheet]):
-        self.sheets = sheets
-
     def is_repo_known(self, /, repo_full: str):
         """Devuelve verdadero si el repositorio existe en alguna materia.
         """
-        return any(repo_full in sheet.data for sheet in self.sheets)
+        return repo_full in self.data

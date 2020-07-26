@@ -7,4 +7,7 @@ docstring_convention = google
 
 # D1xx: Missing docstrings ¯\_(ツ)_/¯
 # D200: One-line docstring should fit on one line with quotes.
+# F401: Module imported but unused
+# F403: ‘from module import *’ used; unable to detect undefined names
+# per-file-ignores = __init__.py:F401,F403
 extend-ignore = D1,D200
