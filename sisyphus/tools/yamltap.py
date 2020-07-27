@@ -7,6 +7,7 @@ en formato TAP (Test Anything Protocol).
 """
 
 import argparse
+import collections
 import difflib
 import enum
 import json
@@ -29,9 +30,9 @@ from ..common import github_tap
 from ..common.yaml import IncludeLoader
 
 
-MAX_DIFFER_LINES = 15
-MAX_UNIFIED_LINES = 25
-UNIFIED_DIFF_TRUNC = 40
+Hunk = collections.namedtuple("Hunk", "start_a, lines_a, start_b, lines_b")
+
+DIFFER_TRUNC = 100
 
 
 class Env(str, enum.Enum):
@@ -318,11 +319,10 @@ def report_diff(
     None. En caso contrario, devuelve siempre una tupla de dos cadenas, donde la
     segunda siempre es un diff (quizás no completo) entre esperado y obtenido.
 
-    La primera cadena es una breve sinopsis de las diferencias encontradas (cantidad
-    de caracteres, cantidad de líneas, número de líneas en común, etc.); solo se
-    calcula si el diff es mayor a las dimensiones especificadas en MAX_DIFFER_LINES
-    y MAX_UNIFIED_LINES. En ese caso, se incluye la descripción, y se trunca el diff
-    a UNIFIED_DIFF_TRUNC líneas.
+    La primera cadena es una breve sinopsis de las diferencias encontradas (diferencia
+    en número de líneas, y porcentaje de similaridad); solo se la calcula si el diff
+    es mayor a las dimensiones especificadas en DIFFER_TRUNC. En ese caso, se incluye
+    la descripción, y se trunca el diff.
     """
     if policy == Match.IGNORE or expected is None:
         return None
@@ -348,59 +348,59 @@ def report_diff(
     actual_nlines = len(actual_lines)
     expected_nlines = len(expected_lines)
 
-    matcher_lines = difflib.ndiff(expected_lines, actual_lines)
+    # Reportamos cualquier diferencia en número de líneas obtenidas vs. esperadas y,
+    # si se ha truncado el input, un porcentaje de similaridad del input original.
+
+    if expected_nlines != actual_nlines:
+        desc = f"se esperaba {expected_nlines} líneas, no {actual_nlines}"
+    else:
+        desc = ""
 
     # Estos "filenames" descriptivos aparecerán con las líneas --- y +++ iniciales.
 
     missing = "líneas con '-' faltan"
-    incorrect = "líneas con '+' no son correctas"
+    incorrect = "líneas con '+' son erróneas"
+    diff_lines = [f"--- {missing}\n", f"+++ {incorrect}\n"]
 
-    # Usamos la siguiente heurística: si el total de líneas en cada lado es menor a
-    # 15, imprimimos directamente el resultado del SequenceMatcher, que probablemente
-    # es más legible que el unified diff.
+    if expected_nlines + actual_nlines <= DIFFER_TRUNC * 2:
+        # Se muestra un diff completo.
+        ndiff = difflib.ndiff(expected_lines, actual_lines)
+        diff_lines.extend(re.sub(r"^\?", " ", line) for line in ndiff)
+        return desc, "".join(diff_lines)
 
-    if expected_nlines <= MAX_DIFFER_LINES and actual_nlines <= MAX_DIFFER_LINES:
-        lines = [f"--- {missing}\n", f"+++ {incorrect}\n"]
-        lines.extend(re.sub(r"^\?", " ", line) for line in matcher_lines)
-        return "", "".join(lines)
+    # Usamos un unified diff para encontrar las regiones con diferencias.
+    diff = difflib.unified_diff(expected_lines, actual_lines)
+    matcher = difflib.SequenceMatcher(None, expected_lines, actual_lines)
+    hunk_lines = [line for line in diff if line.startswith("@@")]
 
-    # Si no, imprimiremos un unified diff. Lo imprimimos directo si tiene menos de
-    # 20 líneas en total.
-
-    unified_diff = list(
-        difflib.unified_diff(expected_lines, actual_lines, missing, incorrect)
-    )
-
-    if len(unified_diff) < MAX_UNIFIED_LINES:
-        return "", "".join(unified_diff)
-
-    # Si no, ofrecemos una sinopsis de las líneas obtenidas vs esperadas, e imprimimos
-    # un subset del unified diff.
-
-    desc = ""
-    num_common = sum(line.startswith("  ") for line in matcher_lines)
-    actual_len = len(actual)
-    expected_len = len(expected)
-
-    if expected_nlines != actual_nlines:
-        desc += f"debe contener {expected_nlines} línas, se obtuvo {actual_nlines}"
-        if num_common:
-            desc += f" (de las cuales {num_common} son correctas)"
-    elif expected_len != actual_len:
-        desc += f"contiene {actual_len} caracteres pero se esperaba {expected_len}"
-        if num_common:
-            desc += f" (de {actual_nlines} líneas, {num_common} son correctas)"
-
-    if not num_common:
-        if not desc:
-            desc = "la salida coincide en número de líneas, pero ninguna es correcta"
+    for hunk_hdr in hunk_lines:
+        if hunk := make_hunk(hunk_hdr):
+            lines_a = min(DIFFER_TRUNC, hunk.lines_a)
+            lines_b = min(DIFFER_TRUNC, hunk.lines_b)
+            actual_hunk = actual_lines[hunk.start_b : hunk.start_b + lines_b]
+            expected_hunk = expected_lines[hunk.start_a : hunk.start_a + lines_a]
         else:
-            desc += " (ninguna línea es correcta)"
+            print(f"ERROR: could not parse {hunk_hdr!r} as hunk", file=sys.stderr)
+            continue
 
-    skipped = len(unified_diff) - UNIFIED_DIFF_TRUNC
-    truncated = unified_diff[:UNIFIED_DIFF_TRUNC] + [f"... {skipped} more lines"]
+        ndiff = difflib.ndiff(expected_hunk, actual_hunk)
+        diff_lines.append(hunk_hdr)
+        diff_lines.extend(re.sub(r"^\?", " ", line) for line in ndiff)
 
-    return desc, "".join(truncated)
+        if len(diff_lines) > DIFFER_TRUNC * 2:
+            desc += "({:.2f}% en común)".format(matcher.ratio() * 100)
+            if omitted := actual_nlines - hunk.start_b - lines_b:
+                diff_lines.append(f" … {omitted} líneas no mostradas")
+            break
+
+    return desc, "".join(diff_lines)
+
+
+def make_hunk(line: str) -> Optional[Hunk]:
+    if m := re.match(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@", line):
+        start_a, lines_a, start_b, lines_b = m.groups()
+        return Hunk(int(start_a), int(lines_a), int(start_b), int(lines_b))
+    return None
 
 
 def update_details(details_dict, diff_result, key_name):
