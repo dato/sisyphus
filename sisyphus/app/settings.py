@@ -18,6 +18,7 @@ class ReposApp(BaseSettings):
     sheets_auth: str
     spreadsheet_id: str
     webhook_secret: SecretStr
+    job_queue: str = "default"
 
     class Config:
         env_prefix = "REPOS_"
