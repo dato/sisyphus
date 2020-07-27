@@ -9,6 +9,7 @@ from ..common import github_utils
 from ..common.typ import AppInstallationTokenAuth, CorregirJob, Repo
 from ..corrector.tasks import corregir_entrega
 from .queue import task_queue
+from .reposdb import make_reposdb
 from .settings import load_config
 
 
@@ -16,6 +17,7 @@ __all__ = [
     "repos_hook",
 ]
 
+reposdb = make_reposdb()
 repos_hook = GitHubApp()
 
 
@@ -42,27 +44,41 @@ def checksuite_rerequested():
     create_runs(repos_hook.payload)
 
 
+@repos_hook.on("check_run.rerequested")
+def checkrun_rerequested():
+    create_runs(repos_hook.payload)
+
+
 def create_runs(payload):
     config = load_config()
     logger = logging.getLogger(__name__)
 
+    # We are normally called from check_suite.(re)requested, but this could also be
+    # a check_run.rerequested; in that case the check_suite is inside the check_run
+    # object.
+    if "check_run" not in payload:
+        suite = payload["check_suite"]
+    else:
+        suite = payload["check_run"]["check_suite"]
+
+    materia = None
     repo = payload["repository"]
-    suite = payload["check_suite"]
     branch = suite["head_branch"]
     repo_full = repo["full_name"]
 
-    if re.match(r"^0+$", suite["before"]):
+    if not reposdb.is_repo_known(repo_full):
+        logger.debug(f"ignoring check_suite request from unknown repo {repo_full}")
+    elif re.match(r"^0+$", suite["before"]):
         logger.info(f"ignoring check_suite event for just-created {repo_full}@{branch}")
-        return
-    elif m := re.match(r"(algorw-alu|fiubatps)/(algo2)_2020a_", repo_full):
-        materia = m.group(2)
-    else:
-        logger.debug(f"ignoring check_suite request from {repo_full}")
-        return
-
-    if branch not in config.materias[materia].entregas:
+    elif branch not in config.entregas:
         logging.warn(f"ignoring check_suite for branch {branch!r} in {repo_full}")
+    elif not (m := re.search(r"/([^_]+)_", repo_full)):
+        logger.error(f"could not extract course name from {repo_full}")
     else:
+        # TODO: remove this.
+        materia = m.group(1)
+
+    if materia:
         logger.info(f"enqueuing check-run job for {repo_full}@{branch}")
         job = CorregirJob(
             repo=Repo(repo_full),
