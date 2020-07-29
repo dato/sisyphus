@@ -1,7 +1,5 @@
 repos_app:
   endpoint: /hooks/repos
-  sheets_auth: sheets_account.json
-  spreadsheet_id: 1N-oXthyR5K8FEIQCcxuWKLBDTUFF2ugubWgiuk6YKbA
 entregas:
   lab1:
     checks:
