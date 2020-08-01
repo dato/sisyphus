@@ -7,8 +7,11 @@
 # de argv[0], e importa main() desde sisyphus.tools.<NOMBRE>.
 
 MODULE="$(basename $0)"
-SCRIPT="$(realpath $0)"
-export PYTHONPATH="$(dirname ${SCRIPT%/*})"  # Dos niveles up.
+SCRIPT="$(realpath $BASH_SOURCE)"
+ROOTDIR="$(dirname ${SCRIPT%/*})"  # Dos niveles up.
+
+export PYTHONPATH="$ROOTDIR"
+export PATH="$ROOTDIR/venv/bin:$PATH"
 
 echo "import sys; sys.argv[0] = '$MODULE'; \
       from sisyphus.tools.$MODULE import main; main()" | python3 - "$@"
