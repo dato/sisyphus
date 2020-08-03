@@ -5,31 +5,20 @@ from typing import Dict
 
 import yaml
 
-from pydantic import BaseSettings, Field, SecretStr, root_validator, validator
+from pydantic import BaseSettings, Field, root_validator, validator
 
+from ..appbase import GithubApp
 from ..common.yaml import IncludeLoader
 from ..corrector.typ import Check, Entrega
 
 
-class ReposApp(BaseSettings):
-    app_id: int
-    key_path: str
-    endpoint: str
+class ReposApp(GithubApp):
     sheets_auth: str
     spreadsheet_id: str
-    webhook_secret: SecretStr
     job_queue: str = "default"
 
     class Config:
         env_prefix = "REPOS_"
-
-    def flask_config(self):
-        return dict(
-            GITHUBAPP_ID=self.app_id,
-            GITHUBAPP_ROUTE=self.endpoint,
-            GITHUBAPP_SECRET=self.webhook_secret.get_secret_value(),
-            GITHUBAPP_KEY=open(self.key_path, "rb").read(),
-        )
 
 
 class Settings(BaseSettings):
