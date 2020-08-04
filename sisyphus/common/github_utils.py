@@ -46,9 +46,13 @@ def repo_files(gh_repo: PyGithubRepo, sha: str, subdir: str = None) -> List[Repo
     if isinstance(contents, ContentFile):
         contents = [contents]
 
-    for entry in contents:
-        if entry.type != "file":
-            logger.warn(f"ignoring entry {entry.path!r} of type {entry.type}")
+    while contents:
+        entry = contents.pop(0)
+        if entry.type == "dir":
+            subcontents = gh_repo.get_contents(entry.path, sha)
+            contents.extend(
+                [subcontents] if isinstance(subcontents, ContentFile) else subcontents
+            )
             continue
         rel_path = pathlib.PurePath(entry.path).relative_to(subdir)
         try:
