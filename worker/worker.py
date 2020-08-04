@@ -19,8 +19,8 @@ El script:
 """
 
 import argparse
-import pathlib
 import os
+import pathlib
 import signal
 import subprocess
 import sys
@@ -28,6 +28,7 @@ import tarfile
 import tempfile
 
 from java import CorregirJava
+
 
 class ErrorAlumno(Exception):
   pass
@@ -129,20 +130,20 @@ def main():
   except ErrorAlumno as ex:
     print("ERROR: {}.".format(ex))
 
-##
 
 class Timeout(Exception):
   """Excepción para nuestra implementación de timeouts.
   """
+
 
 def raise_timeout(unused_signum, unused_frame):
   """Lanza nuestra excepción Timeout.
   """
   raise Timeout
 
+
 signal.signal(signal.SIGALRM, raise_timeout)
 
-##
 
 if __name__ == "__main__":
   main()

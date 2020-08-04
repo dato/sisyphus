@@ -9,5 +9,12 @@ docstring_convention = google
 # D200: One-line docstring should fit on one line with quotes.
 # F401: Module imported but unused
 # F403: ‘from module import *’ used; unable to detect undefined names
+# P101: format string does contain unindexed parameters
 # per-file-ignores = __init__.py:F401,F403
-extend-ignore = D1,D200
+extend-ignore = D1,D200,P101
+
+# BLK100: Black would make changes
+# E111: indentation is not a multiple of four
+# E114: indentation is not a multiple of four (comment)
+per-file-ignores =
+    worker/*.py:E111,E114,BLK100

@@ -7,6 +7,7 @@ import sys
 
 import jinja2
 
+
 TEMPL_DIR = os.path.dirname(__file__)
 ResultTuple = collections.namedtuple("ResultTuple", "succ, log")
 
@@ -31,8 +32,7 @@ class CorregirJava:
     # en "alu" dependencias para la compilación.
     for file in pub.glob("**/*.java"):
       shutil.copy(file, corr)
-      if (file.name not in seen_alu and
-          not file.name.startswith("Test")):  # XXX Hackish.
+      if file.name not in seen_alu and not file.name.startswith("Test"):  # XXX Hackish.
         shutil.copy(file, alu)
 
     shutil.copy(pub / "build.xml", self.path)
