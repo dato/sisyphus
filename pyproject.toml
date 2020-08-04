@@ -11,3 +11,8 @@ lines_between_types = 1
 
 [tool.black]
 target-version = ["py38"]
+include = '''
+/(
+| sisyphus/.+
+)$
+'''

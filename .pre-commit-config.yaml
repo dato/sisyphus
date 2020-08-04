@@ -5,6 +5,7 @@ repos:
     hooks:
     - id: black
       language_version: python3
+      exclude: ^worker/
   - repo: local
     hooks:
       - id: flake8
