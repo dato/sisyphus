@@ -1,5 +1,6 @@
 Flask==1.*
 Flask-GithubApp==0.2.*
+GitPython==3.*
 PyGithub==1.*
 PyYAML==5.*
 google-api-python-client==1.*
