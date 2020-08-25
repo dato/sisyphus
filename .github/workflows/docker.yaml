@@ -1,0 +1,23 @@
+name: docker
+on:
+  push:
+    branches:
+      - master
+jobs:
+  docker:
+    name: Build base image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Remove comments from requirements.txt
+        run: |
+          sed -nre 's/ +#.*//p' -i requirements.txt
+      - name: Build base image
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.pkg.github.com
+          repository: dato/sisyphus/base
+          tag_with_ref: true
+          add_git_labels: true
