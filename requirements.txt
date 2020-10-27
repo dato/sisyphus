@@ -9,7 +9,7 @@ certifi==2020.4.5.2       # via requests
 cffi==1.14.0              # via cryptography
 chardet==3.0.4            # via requests
 click==7.1.2              # via flask, rq
-cryptography==2.9.2       # via jwcrypto
+cryptography==3.2         # via jwcrypto
 deprecated==1.2.10        # via pygithub
 flask-githubapp==0.2.0    # via -r requirements.in
 flask==1.1.2              # via -r requirements.in, flask-githubapp
